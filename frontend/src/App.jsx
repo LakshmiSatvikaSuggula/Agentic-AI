@@ -1,57 +1,36 @@
-import { useEffect, useState } from "react";
+// src/App.jsx
+import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
+import Dashboard from "./pages/Dashboard";
+import Students from "./pages/Students";
+import Jobs from "./pages/Jobs";
+import Interviews from "./pages/Interviews";
+import "./App.css";
 
 export default function App() {
-  const [students, setStudents] = useState([]);
-  const [status, setStatus] = useState("loading");
-
-  useEffect(() => {
-    fetch("/api/students")
-      .then((res) => res.json())
-      .then((data) => {
-        setStudents(data);
-        setStatus("ready");
-      })
-      .catch(() => setStatus("error"));
-  }, []);
-
   return (
-    <div style={{ fontFamily: "sans-serif", maxWidth: 720, margin: "40px auto" }}>
-      <h1>Placement Operations Agent</h1>
-      <p>Frontend talking to backend — student records below.</p>
+    <BrowserRouter>
+      <div className="app">
+        <nav className="navbar">
+          <h1 className="navbar-title">Placement Agent</h1>
+          <div className="navbar-links">
+            <NavLink to="/" end>
+              Dashboard
+            </NavLink>
+            <NavLink to="/students">Students</NavLink>
+            <NavLink to="/jobs">Jobs</NavLink>
+            <NavLink to="/interviews">Interviews</NavLink>
+          </div>
+        </nav>
 
-      {status === "loading" && <p>Loading students...</p>}
-      {status === "error" && (
-        <p style={{ color: "crimson" }}>
-          Could not reach backend. Make sure it's running on port 5000.
-        </p>
-      )}
-
-      {status === "ready" && (
-        <table cellPadding={8} style={{ borderCollapse: "collapse", width: "100%" }}>
-          <thead>
-            <tr style={{ borderBottom: "2px solid #333", textAlign: "left" }}>
-              <th>Name</th>
-              <th>Roll No</th>
-              <th>Branch</th>
-              <th>CGPA</th>
-              <th>Backlogs</th>
-              <th>Skills</th>
-            </tr>
-          </thead>
-          <tbody>
-            {students.map((s) => (
-              <tr key={s.id} style={{ borderBottom: "1px solid #ddd" }}>
-                <td>{s.name}</td>
-                <td>{s.rollNo}</td>
-                <td>{s.branch}</td>
-                <td>{s.cgpa}</td>
-                <td>{s.activeBacklogs}</td>
-                <td>{s.skills.join(", ")}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
+        <main className="content">
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/students" element={<Students />} />
+            <Route path="/jobs" element={<Jobs />} />
+            <Route path="/interviews" element={<Interviews />} />
+          </Routes>
+        </main>
+      </div>
+    </BrowserRouter>
   );
 }
