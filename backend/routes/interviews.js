@@ -1,77 +1,55 @@
 import express from "express";
-import { nanoid } from "nanoid";
-import { readCollection, insertRecord, updateRecord, findById } from "../utils/db.js";
+import Interview from "../models/Interview.js";
 import { checkSlotConflicts } from "../utils/scheduler.js";
 import { sendInterviewReminders } from "../utils/notifications.js";
 
 const router = express.Router();
-const FILE = "interviews.json";
 
-// GET /api/interviews - list all scheduled interviews
-router.get("/", (req, res) => {
-  res.json(readCollection(FILE));
+router.get("/", async (req, res) => {
+  res.json(await Interview.find());
 });
 
-// GET /api/interviews/:id - get one interview
-router.get("/:id", (req, res) => {
-  const interview = findById(FILE, req.params.id);
+router.get("/:id", async (req, res) => {
+  const interview = await Interview.findById(req.params.id);
   if (!interview) return res.status(404).json({ error: "Interview not found" });
   res.json(interview);
 });
 
-// POST /api/interviews - schedule a new interview, checking for conflicts first
-router.post("/", (req, res) => {
+router.post("/", async (req, res) => {
   const { jobId, studentId, studentName, panelists, room, startTime, durationMinutes } = req.body;
 
   if (!jobId || !studentId || !startTime || !durationMinutes) {
-    return res.status(400).json({
-      error: "jobId, studentId, startTime, and durationMinutes are required"
-    });
+    return res.status(400).json({ error: "jobId, studentId, startTime, and durationMinutes are required" });
   }
 
-  const existing = readCollection(FILE);
+  const existing = await Interview.find();
   const proposedSlot = { panelists: panelists || [], room, startTime, durationMinutes };
 
   const { hasConflict, conflicts } = checkSlotConflicts(existing, proposedSlot);
-
   if (hasConflict) {
-    return res.status(409).json({
-      error: "Scheduling conflict detected",
-      conflicts
-    });
+    return res.status(409).json({ error: "Scheduling conflict detected", conflicts });
   }
 
-  const interview = insertRecord(FILE, {
-    id: nanoid(),
-    jobId,
-    studentId,
-    studentName: studentName || "",
-    panelists: panelists || [],
-    room: room || "",
-    startTime,
-    durationMinutes,
-    status: "scheduled",
-    outcome: null,
-    createdAt: new Date().toISOString()
+  const interview = await Interview.create({
+    jobId, studentId, studentName: studentName || "", panelists: panelists || [],
+    room: room || "", startTime, durationMinutes
   });
 
   res.status(201).json(interview);
 });
 
-// PATCH /api/interviews/:id - update status/outcome after the interview happens
-router.patch("/:id", (req, res) => {
-  const updated = updateRecord(FILE, req.params.id, req.body);
+router.patch("/:id", async (req, res) => {
+  const updated = await Interview.findByIdAndUpdate(req.params.id, req.body, { new: true });
   if (!updated) return res.status(404).json({ error: "Interview not found" });
   res.json(updated);
 });
 
-// POST /api/interviews/:id/notify - send reminders to student + panelists
-router.post("/:id/notify", (req, res) => {
-  const interview = findById(FILE, req.params.id);
+router.post("/:id/notify", async (req, res) => {
+  const interview = await Interview.findById(req.params.id);
   if (!interview) return res.status(404).json({ error: "Interview not found" });
 
   const sent = sendInterviewReminders(interview);
-  res.json({ interviewId: interview.id, notificationsSent: sent });
+  res.json({ interviewId: interview._id, notificationsSent: sent });
 });
 
 export default router;

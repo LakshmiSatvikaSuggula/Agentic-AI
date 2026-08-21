@@ -1,49 +1,48 @@
 import express from "express";
-import { nanoid } from "nanoid";
-import { readCollection, insertRecord, updateRecord, findById } from "../utils/db.js";
+import Student from "../models/Student.js";
 
 const router = express.Router();
-const FILE = "students.json";
 
-function seedIfEmpty() {
-  const existing = readCollection(FILE);
-  if (existing.length > 0) return;
+// Seed a few sample students the first time the collection is empty
+async function seedIfEmpty() {
+  const count = await Student.countDocuments();
+  if (count > 0) return;
 
-  const seed = [
-    { id: nanoid(), name: "Ananya Rao", rollNo: "21CS045", branch: "CSE", cgpa: 8.7, activeBacklogs: 0, skills: ["JavaScript", "React", "Node.js", "SQL"], placementStatus: "unplaced" },
-    { id: nanoid(), name: "Rahul Menon", rollNo: "21EC012", branch: "ECE", cgpa: 6.9, activeBacklogs: 1, skills: ["Python", "Embedded C"], placementStatus: "unplaced" },
-    { id: nanoid(), name: "Priya Sharma", rollNo: "21CS089", branch: "CSE", cgpa: 9.2, activeBacklogs: 0, skills: ["Python", "Machine Learning", "SQL", "Django"], placementStatus: "unplaced" }
-  ];
-
-  seed.forEach((s) => insertRecord(FILE, s));
+  await Student.insertMany([
+    { name: "Ananya Rao", rollNo: "21CS045", branch: "CSE", cgpa: 8.7, activeBacklogs: 0, skills: ["JavaScript", "React", "Node.js", "SQL"] },
+    { name: "Rahul Menon", rollNo: "21EC012", branch: "ECE", cgpa: 6.9, activeBacklogs: 1, skills: ["Python", "Embedded C"] },
+    { name: "Priya Sharma", rollNo: "21CS089", branch: "CSE", cgpa: 9.2, activeBacklogs: 0, skills: ["Python", "Machine Learning", "SQL", "Django"] }
+  ]);
 }
 
 seedIfEmpty();
 
-router.get("/", (req, res) => {
-  res.json(readCollection(FILE));
+// GET /api/students - list all students
+router.get("/", async (req, res) => {
+  const students = await Student.find();
+  res.json(students);
 });
 
-router.get("/:id", (req, res) => {
-  const student = findById(FILE, req.params.id);
+// GET /api/students/:id - get one student
+router.get("/:id", async (req, res) => {
+  const student = await Student.findById(req.params.id);
   if (!student) return res.status(404).json({ error: "Student not found" });
   res.json(student);
 });
 
-router.post("/", (req, res) => {
+// POST /api/students - add a new student
+router.post("/", async (req, res) => {
   const { name, rollNo, branch, cgpa, activeBacklogs, skills } = req.body;
   if (!name || !rollNo) {
     return res.status(400).json({ error: "name and rollNo are required" });
   }
-  const record = insertRecord(FILE, {
-    id: nanoid(), name, rollNo, branch: branch || "", cgpa: cgpa ?? 0,
-    activeBacklogs: activeBacklogs ?? 0, skills: skills || [], placementStatus: "unplaced"
-  });
-  res.status(201).json(record);
+  const student = await Student.create({ name, rollNo, branch, cgpa, activeBacklogs, skills });
+  res.status(201).json(student);
 });
 
-router.patch("/:id", (req, res) => {
-  const updated = updateRecord(FILE, req.params.id, req.body);
+// PATCH /api/students/:id - update a student record
+router.patch("/:id", async (req, res) => {
+  const updated = await Student.findByIdAndUpdate(req.params.id, req.body, { new: true });
   if (!updated) return res.status(404).json({ error: "Student not found" });
   res.json(updated);
 });

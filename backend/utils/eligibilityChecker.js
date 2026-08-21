@@ -1,7 +1,3 @@
-// Checks a single student against a job's eligibility criteria.
-// Returns whether they're eligible, plus the specific reasons if not -
-// this transparency matters so a TPO can see exactly why someone was filtered out.
-
 export function checkEligibility(student, job) {
   const reasons = [];
 
@@ -28,14 +24,13 @@ export function checkEligibility(student, job) {
   }
 
   return {
-    studentId: student.id,
+    studentId: student._id,
     studentName: student.name,
     eligible: reasons.length === 0,
     reasons
   };
 }
 
-// Runs eligibility check across a full list of students for one job.
 export function checkEligibilityForAll(students, job) {
   return students.map((student) => checkEligibility(student, job));
 }

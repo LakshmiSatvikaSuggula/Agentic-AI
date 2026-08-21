@@ -1,18 +1,15 @@
 import express from "express";
-import { readCollection } from "../utils/db.js";
-import {
-  getPendingActions,
-  getExceptions,
-  getSkillGapAnalytics
-} from "../utils/dashboardAnalytics.js";
+import Job from "../models/Job.js";
+import Student from "../models/Student.js";
+import Interview from "../models/Interview.js";
+import { getPendingActions, getExceptions, getSkillGapAnalytics } from "../utils/dashboardAnalytics.js";
 
 const router = express.Router();
 
-// GET /api/dashboard - full placement operations overview
-router.get("/", (req, res) => {
-  const jobs = readCollection("jobs.json");
-  const students = readCollection("students.json");
-  const interviews = readCollection("interviews.json");
+router.get("/", async (req, res) => {
+  const jobs = await Job.find();
+  const students = await Student.find();
+  const interviews = await Interview.find();
 
   res.json({
     summary: {

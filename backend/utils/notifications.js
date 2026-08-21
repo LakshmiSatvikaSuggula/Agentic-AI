@@ -30,13 +30,29 @@ export function buildPanelistReminderMessage(interview) {
 
 // Sends a notification - currently logs to console, swap this function's
 // body for a real email/SMS provider call when ready.
-export function sendNotification(recipient, message) {
-  console.log(`[NOTIFICATION to ${recipient}]: ${message}`);
+import nodemailer from "nodemailer";
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD
+  }
+});
+
+export async function sendNotification(recipientEmail, message) {
+  await transporter.sendMail({
+    from: process.env.GMAIL_USER,
+    to: recipientEmail,
+    subject: "Placement Cell Notification",
+    text: message
+  });
+
   return {
-    recipient,
+    recipient: recipientEmail,
     message,
     sentAt: new Date().toISOString(),
-    channel: "console-log"
+    channel: "email"
   };
 }
 

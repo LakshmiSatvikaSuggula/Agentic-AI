@@ -1,11 +1,3 @@
-// Scores and ranks students against a job's required skills, with a
-// plain-language explanation for each match - so a recruiter can see
-// *why* someone was ranked where they were, not just a black-box score.
-
-function normalizeSkill(skill) {
-  return skill.trim().toLowerCase();
-}
-
 export function scoreStudentMatch(student, job) {
   const required = (job.requiredSkills || []).map(normalizeSkill);
   const studentSkills = (student.skills || []).map(normalizeSkill);
@@ -28,7 +20,7 @@ export function scoreStudentMatch(student, job) {
   }
 
   return {
-    studentId: student.id,
+    studentId: student._id,
     studentName: student.name,
     matchPercent,
     matchedSkills: matched,
@@ -37,7 +29,6 @@ export function scoreStudentMatch(student, job) {
   };
 }
 
-// Ranks a list of students for a job, highest match first.
 export function rankStudentsForJob(students, job) {
   return students
     .map((student) => scoreStudentMatch(student, job))
