@@ -9,6 +9,7 @@ const emptyForm = {
   cgpa: "",
   activeBacklogs: "",
   skills: "",
+  email:"",
 };
 
 export default function Students() {
@@ -37,24 +38,24 @@ export default function Students() {
   async function handleSubmit(e) {
     e.preventDefault();
     setFormError(null);
-
-    if (!form.name.trim() || !form.rollNo.trim()) {
-      setFormError("Name and Roll No are required.");
+    if (!form.name.trim() || !form.rollNo.trim()||!form.email.trim()) {
+      setFormError("Name and Roll No and Email are required.");
       return;
     }
 
     setSubmitting(true);
     try {
       const payload = {
-        name: form.name.trim(),
-        rollNo: form.rollNo.trim(),
-        branch: form.branch.trim(),
-        cgpa: form.cgpa ? Number(form.cgpa) : undefined,
-        activeBacklogs: form.activeBacklogs ? Number(form.activeBacklogs) : undefined,
-        skills: form.skills
-          ? form.skills.split(",").map((s) => s.trim()).filter(Boolean)
-          : [],
-      };
+  name: form.name.trim(),
+  rollNo: form.rollNo.trim(),
+  branch: form.branch.trim(),
+  cgpa: form.cgpa ? Number(form.cgpa) : undefined,
+  activeBacklogs: form.activeBacklogs ? Number(form.activeBacklogs) : undefined,
+  skills: form.skills
+    ? form.skills.split(",").map((s) => s.trim()).filter(Boolean)
+    : [],
+  email: form.email.trim(),
+};
       const created = await api.createStudent(payload);
       setStudents((prev) => [...prev, created]);
       setForm(emptyForm);
@@ -107,6 +108,13 @@ export default function Students() {
           onChange={handleChange}
         />
         <input
+  name="email"
+  type="email"
+  placeholder="Email *"
+  value={form.email}
+  onChange={handleChange}
+/>
+        <input
           name="skills"
           placeholder="Skills (comma separated)"
           value={form.skills}
@@ -133,18 +141,22 @@ export default function Students() {
               <th>Backlogs</th>
               <th>Skills</th>
               <th>Status</th>
+              <th>Email</th>
             </tr>
           </thead>
           <tbody>
             {students.map((s) => (
-              <tr key={s.id}>
+              <tr key={s._id}>
                 <td>{s.name}</td>
+                
                 <td>{s.rollNo}</td>
                 <td>{s.branch}</td>
                 <td>{s.cgpa}</td>
                 <td>{s.activeBacklogs}</td>
+               
                 <td>{(s.skills || []).join(", ")}</td>
                 <td>{s.placementStatus}</td>
+                 <td>{s.email}</td>
               </tr>
             ))}
           </tbody>

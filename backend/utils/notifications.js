@@ -1,7 +1,18 @@
-// Generates notification messages for students and panelists.
-// This is a prototype - it builds the message text and logs it to the
-// console instead of actually sending email/SMS. Swap sendNotification's
-// body for a real email/SMS API call later without touching callers.
+import nodemailer from "nodemailer";
+
+const transporter = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
+  family: 4,
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD
+  },
+  tls: {
+    rejectUnauthorized: false
+  }
+});
 
 export function buildInterviewReminderMessage(interview) {
   const date = new Date(interview.startTime).toLocaleString("en-IN", {
@@ -16,7 +27,7 @@ export function buildInterviewReminderMessage(interview) {
   );
 }
 
-export function buildPanelistReminderMessage(interview) {
+export function buildPanelistReminderMessage(interview, panelistName) {
   const date = new Date(interview.startTime).toLocaleString("en-IN", {
     dateStyle: "medium",
     timeStyle: "short"
@@ -28,44 +39,56 @@ export function buildPanelistReminderMessage(interview) {
   );
 }
 
-// Sends a notification - currently logs to console, swap this function's
-// body for a real email/SMS provider call when ready.
-import nodemailer from "nodemailer";
-
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD
-  }
-});
-
 export async function sendNotification(recipientEmail, message) {
-  await transporter.sendMail({
-    from: process.env.GMAIL_USER,
-    to: recipientEmail,
-    subject: "Placement Cell Notification",
-    text: message
-  });
+  if (!recipientEmail) {
+    return {
+      recipient: null,
+      message,
+      sentAt: new Date().toISOString(),
+      channel: "email-failed",
+      error: "No email address provided"
+    };
+  }
 
-  return {
-    recipient: recipientEmail,
-    message,
-    sentAt: new Date().toISOString(),
-    channel: "email"
-  };
+  try {
+    await transporter.sendMail({
+      from: process.env.GMAIL_USER,
+      to: recipientEmail,
+      subject: "Placement Cell Notification",
+      text: message
+    });
+
+    return {
+      recipient: recipientEmail,
+      message,
+      sentAt: new Date().toISOString(),
+      channel: "email"
+    };
+  } catch (err) {
+    console.error(`Failed to send email to ${recipientEmail}:`, err.message);
+    return {
+      recipient: recipientEmail,
+      message,
+      sentAt: new Date().toISOString(),
+      channel: "email-failed",
+      error: err.message
+    };
+  }
 }
 
-// Builds and sends all reminders for a given interview (student + panelists)
-export function sendInterviewReminders(interview) {
+// interview here must include a `studentEmail` field (added by the route,
+// since Interview documents only store studentId/studentName, not email)
+export async function sendInterviewReminders(interview) {
   const sent = [];
 
   sent.push(
-    sendNotification(interview.studentName, buildInterviewReminderMessage(interview))
+    await sendNotification(interview.studentEmail, buildInterviewReminderMessage(interview))
   );
 
   for (const panelist of interview.panelists || []) {
-    sent.push(sendNotification(panelist, buildPanelistReminderMessage(interview)));
+    sent.push(
+      await sendNotification(panelist.email, buildPanelistReminderMessage(interview, panelist.name))
+    );
   }
 
   return sent;

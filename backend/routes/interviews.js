@@ -1,5 +1,6 @@
 import express from "express";
 import Interview from "../models/Interview.js";
+import Student from "../models/Student.js";
 import { checkSlotConflicts } from "../utils/scheduler.js";
 import { sendInterviewReminders } from "../utils/notifications.js";
 
@@ -48,7 +49,13 @@ router.post("/:id/notify", async (req, res) => {
   const interview = await Interview.findById(req.params.id);
   if (!interview) return res.status(404).json({ error: "Interview not found" });
 
-  const sent = sendInterviewReminders(interview);
+  const student = await Student.findById(interview.studentId);
+
+  const sent = await sendInterviewReminders({
+    ...interview.toObject(),
+    studentEmail: student?.email || null
+  });
+
   res.json({ interviewId: interview._id, notificationsSent: sent });
 });
 

@@ -8,12 +8,12 @@ export function getPendingActions(jobs, interviews) {
   const openJobsWithoutInterviews = jobs.filter(
     (job) =>
       job.status === "open" &&
-      !interviews.some((iv) => iv.jobId === job.id)
+      !interviews.some((iv) => iv.jobId.toString() === job._id.toString())
   );
   for (const job of openJobsWithoutInterviews) {
     actions.push({
       type: "no_interviews_scheduled",
-      jobId: job.id,
+      jobId: job._id,
       detail: `${job.companyName} - ${job.role} has no interviews scheduled yet`
     });
   }
@@ -24,7 +24,7 @@ export function getPendingActions(jobs, interviews) {
   for (const iv of pendingOutcomes) {
     actions.push({
       type: "outcome_not_recorded",
-      interviewId: iv.id,
+      interviewId: iv._id,
       detail: `Interview with ${iv.studentName} has passed but outcome isn't recorded`
     });
   }
@@ -40,14 +40,14 @@ export function getExceptions(interviews) {
     if (!iv.room) {
       exceptions.push({
         type: "missing_room",
-        interviewId: iv.id,
+        interviewId: iv._id,
         detail: `Interview with ${iv.studentName} has no room assigned`
       });
     }
     if (!iv.panelists || iv.panelists.length === 0) {
       exceptions.push({
         type: "missing_panel",
-        interviewId: iv.id,
+        interviewId: iv._id,
         detail: `Interview with ${iv.studentName} has no panelists assigned`
       });
     }

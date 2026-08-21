@@ -108,7 +108,7 @@ export default function Jobs() {
           </thead>
           <tbody>
             {jobs.map((j) => (
-              <tr key={j.id}>
+              <tr key={j._id}>
                 <td>{j.companyName}</td>
                 <td>{j.role}</td>
                 <td>{j.minCgpa}</td>
@@ -117,7 +117,7 @@ export default function Jobs() {
                 <td>{(j.requiredSkills || []).join(", ")}</td>
                 <td>{j.status}</td>
                 <td>
-                  <button onClick={() => setSelectedJobId(j.id)}>
+                  <button onClick={() => setSelectedJobId(j._id)}>
                     View Eligibility / Matches
                   </button>
                 </td>

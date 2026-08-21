@@ -4,7 +4,12 @@ const interviewSchema = new mongoose.Schema({
   jobId: { type: mongoose.Schema.Types.ObjectId, ref: "Job", required: true },
   studentId: { type: mongoose.Schema.Types.ObjectId, ref: "Student", required: true },
   studentName: String,
-  panelists: [String],
+  panelists: [
+    {
+      name: String,
+      email: String
+    }
+  ],
   room: String,
   startTime: { type: Date, required: true },
   durationMinutes: { type: Number, required: true },

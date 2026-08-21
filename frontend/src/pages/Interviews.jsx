@@ -6,7 +6,8 @@ const emptyForm = {
   jobId: "",
   studentId: "",
   studentName: "",
-  panelists: "",
+  panelistNames: "",
+  panelistEmails: "",
   room: "",
   startTime: "",
   durationMinutes: "",
@@ -44,7 +45,7 @@ export default function Interviews() {
 
     // auto-fill studentName when a student is picked
     if (name === "studentId") {
-      const s = students.find((s) => s.id === value);
+      const s = students.find((s) => s._id === value);
       setForm((f) => ({ ...f, studentId: value, studentName: s?.name || "" }));
     }
   }
@@ -61,13 +62,19 @@ export default function Interviews() {
 
     setSubmitting(true);
     try {
+      const names = form.panelistNames
+        ? form.panelistNames.split(",").map((n) => n.trim()).filter(Boolean)
+        : [];
+      const emails = form.panelistEmails
+        ? form.panelistEmails.split(",").map((e) => e.trim()).filter(Boolean)
+        : [];
+      const panelists = names.map((name, idx) => ({ name, email: emails[idx] || "" }));
+
       const created = await api.createInterview({
         jobId: form.jobId,
         studentId: form.studentId,
         studentName: form.studentName,
-        panelists: form.panelists
-          ? form.panelists.split(",").map((p) => p.trim()).filter(Boolean)
-          : [],
+        panelists,
         room: form.room,
         startTime: form.startTime,
         durationMinutes: Number(form.durationMinutes),
@@ -89,7 +96,7 @@ export default function Interviews() {
   async function handleOutcomeUpdate(id, status, outcome) {
     try {
       const updated = await api.updateInterview(id, { status, outcome });
-      setInterviews((prev) => prev.map((i) => (i.id === id ? updated : i)));
+      setInterviews((prev) => prev.map((i) => (i._id === id ? updated : i)));
     } catch (e) {
       alert(`Failed to update: ${e.message}`);
     }
@@ -125,7 +132,7 @@ export default function Interviews() {
         <select name="jobId" value={form.jobId} onChange={handleChange}>
           <option value="">Select Job *</option>
           {jobs.map((j) => (
-            <option key={j.id} value={j.id}>
+            <option key={j._id} value={j._id}>
               {j.companyName} — {j.role}
             </option>
           ))}
@@ -134,16 +141,22 @@ export default function Interviews() {
         <select name="studentId" value={form.studentId} onChange={handleChange}>
           <option value="">Select Student *</option>
           {students.map((s) => (
-            <option key={s.id} value={s.id}>
+            <option key={s._id} value={s._id}>
               {s.name} ({s.rollNo})
             </option>
           ))}
         </select>
 
         <input
-          name="panelists"
-          placeholder="Panelists (comma separated)"
-          value={form.panelists}
+          name="panelistNames"
+          placeholder="Panelist Names (comma separated)"
+          value={form.panelistNames}
+          onChange={handleChange}
+        />
+        <input
+          name="panelistEmails"
+          placeholder="Panelist Emails (comma separated, same order)"
+          value={form.panelistEmails}
           onChange={handleChange}
         />
         <input
@@ -191,26 +204,26 @@ export default function Interviews() {
           </thead>
           <tbody>
             {interviews.map((i) => (
-              <tr key={i.id}>
+              <tr key={i._id}>
                 <td>{i.studentName}</td>
                 <td>{i.room || "—"}</td>
-                <td>{(i.panelists || []).join(", ") || "—"}</td>
+                <td>{(i.panelists || []).map((p) => p.name).join(", ") || "—"}</td>
                 <td>{new Date(i.startTime).toLocaleString()}</td>
                 <td>{i.durationMinutes} min</td>
                 <td>{i.status}</td>
                 <td>{i.outcome || "—"}</td>
                 <td className="actions">
-                  <button onClick={() => handleNotify(i.id)}>Notify</button>
+                  <button onClick={() => handleNotify(i._id)}>Notify</button>
                   <button
                     onClick={() =>
-                      handleOutcomeUpdate(i.id, "completed", "selected")
+                      handleOutcomeUpdate(i._id, "completed", "selected")
                     }
                   >
                     Mark Selected
                   </button>
                   <button
                     onClick={() =>
-                      handleOutcomeUpdate(i.id, "completed", "rejected")
+                      handleOutcomeUpdate(i._id, "completed", "rejected")
                     }
                   >
                     Mark Rejected

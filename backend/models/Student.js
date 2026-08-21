@@ -7,6 +7,7 @@ const studentSchema = new mongoose.Schema({
   cgpa: Number,
   activeBacklogs: { type: Number, default: 0 },
   skills: [String],
+  email: { type: String, required: true },
   placementStatus: { type: String, default: "unplaced" }
 });
 
