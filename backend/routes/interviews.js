@@ -2,6 +2,7 @@ import express from "express";
 import { nanoid } from "nanoid";
 import { readCollection, insertRecord, updateRecord, findById } from "../utils/db.js";
 import { checkSlotConflicts } from "../utils/scheduler.js";
+import { sendInterviewReminders } from "../utils/notifications.js";
 
 const router = express.Router();
 const FILE = "interviews.json";
@@ -62,6 +63,15 @@ router.patch("/:id", (req, res) => {
   const updated = updateRecord(FILE, req.params.id, req.body);
   if (!updated) return res.status(404).json({ error: "Interview not found" });
   res.json(updated);
+});
+
+// POST /api/interviews/:id/notify - send reminders to student + panelists
+router.post("/:id/notify", (req, res) => {
+  const interview = findById(FILE, req.params.id);
+  if (!interview) return res.status(404).json({ error: "Interview not found" });
+
+  const sent = sendInterviewReminders(interview);
+  res.json({ interviewId: interview.id, notificationsSent: sent });
 });
 
 export default router;

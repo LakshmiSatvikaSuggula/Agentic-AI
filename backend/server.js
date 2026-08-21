@@ -3,6 +3,7 @@ import cors from "cors";
 import studentRoutes from "./routes/students.js";
 import jobRoutes from "./routes/jobs.js";
 import interviewRoutes from "./routes/interviews.js";
+import dashboardRoutes from "./routes/dashboard.js";
 
 const app = express();
 const PORT = 5000;
@@ -17,6 +18,7 @@ app.get("/api/health", (req, res) => {
 app.use("/api/students", studentRoutes);
 app.use("/api/jobs", jobRoutes);
 app.use("/api/interviews", interviewRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 app.listen(PORT, () => {
   console.log(`Placement agent backend running on http://localhost:${PORT}`);
