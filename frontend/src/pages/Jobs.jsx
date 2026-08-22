@@ -38,6 +38,7 @@ export default function Jobs() {
       setFormError("Company name, role, and description are all required.");
       return;
     }
+    
 
     setSubmitting(true);
     try {
