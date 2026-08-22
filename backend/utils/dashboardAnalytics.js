@@ -1,5 +1,6 @@
 // Aggregates data across jobs, students, and interviews into the
-// placement dashboard: pending actions, exceptions, and skill-gap analytics.
+// placement dashboard: pending actions, exceptions, skill-gap analytics,
+// and per-student placement readiness.
 
 // Pending actions: things that need a human to act on them
 export function getPendingActions(jobs, interviews) {
@@ -84,4 +85,88 @@ export function getSkillGapAnalytics(jobs, students) {
   });
 
   return gaps.sort((a, b) => a.coveragePercent - b.coveragePercent);
+}
+
+// Placement-readiness: a per-student score reflecting how strong a
+// candidate they are right now, based on academic standing and how
+// well their skills cover what open jobs are actually asking for.
+
+function getInDemandSkills(jobs) {
+  const demand = {};
+  for (const job of jobs) {
+    for (const skill of job.requiredSkills || []) {
+      const key = skill.toLowerCase();
+      demand[key] = (demand[key] || 0) + 1;
+    }
+  }
+  return demand;
+}
+
+export function getPlacementReadiness(students, jobs) {
+  const inDemandSkills = getInDemandSkills(jobs);
+
+  return students
+    .map((student) => {
+      const reasons = [];
+      let score = 0;
+
+      // Academic standing - up to 40 points
+      if (student.cgpa >= 8) {
+        score += 40;
+      } else if (student.cgpa >= 7) {
+        score += 30;
+        reasons.push("CGPA is solid but below 8 - some companies set a higher bar");
+      } else if (student.cgpa >= 6) {
+        score += 15;
+        reasons.push("CGPA may fall below several companies' minimum cutoff");
+      } else {
+        reasons.push("CGPA is low and will filter this student out of most eligibility checks");
+      }
+
+      // Backlogs - up to 20 points
+      if (student.activeBacklogs === 0) {
+        score += 20;
+      } else if (student.activeBacklogs === 1) {
+        score += 8;
+        reasons.push("1 active backlog will disqualify from zero-backlog roles");
+      } else {
+        reasons.push(`${student.activeBacklogs} active backlogs significantly limit eligibility`);
+      }
+
+      // Skill coverage against current job market - up to 40 points
+      const studentSkills = (student.skills || []).map((s) => s.toLowerCase());
+      const demandedSkillNames = Object.keys(inDemandSkills);
+      const matchedDemand = demandedSkillNames.filter((s) => studentSkills.includes(s));
+      const missingDemand = demandedSkillNames.filter((s) => !studentSkills.includes(s));
+
+      const skillCoveragePercent =
+        demandedSkillNames.length === 0
+          ? 100
+          : Math.round((matchedDemand.length / demandedSkillNames.length) * 100);
+
+      score += Math.round((skillCoveragePercent / 100) * 40);
+
+      if (missingDemand.length > 0) {
+        reasons.push(
+          `Missing ${missingDemand.length} in-demand skill(s) from current openings: ${missingDemand.join(", ")}`
+        );
+      }
+
+      let readinessLabel;
+      if (score >= 80) readinessLabel = "Highly ready";
+      else if (score >= 60) readinessLabel = "Ready";
+      else if (score >= 40) readinessLabel = "Needs improvement";
+      else readinessLabel = "At risk";
+
+      return {
+        studentId: student._id,
+        studentName: student.name,
+        readinessScore: score,
+        readinessLabel,
+        matchedInDemandSkills: matchedDemand,
+        missingInDemandSkills: missingDemand,
+        reasons: reasons.length > 0 ? reasons : ["Strong academic standing and skill coverage"]
+      };
+    })
+    .sort((a, b) => b.readinessScore - a.readinessScore);
 }

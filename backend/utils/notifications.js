@@ -92,4 +92,31 @@ export async function sendInterviewReminders(interview) {
   }
 
   return sent;
+  
+}
+export function buildSelectionMessage(interview) {
+  return (
+    `Congratulations ${interview.studentName}! You have been SELECTED ` +
+    `for the role you interviewed for. The placement cell will reach out ` +
+    `shortly with next steps and offer details. Well done!`
+  );
+}
+
+export function buildRejectionMessage(interview) {
+  return (
+    `Hi ${interview.studentName}, thank you for interviewing. After careful ` +
+    `consideration, you were not selected for this particular role. Please don't ` +
+    `be discouraged - keep an eye out for upcoming opportunities, and reach out ` +
+    `to the placement cell if you'd like feedback.`
+  );
+}
+
+// Sends the appropriate outcome message to a student based on status.
+export async function sendOutcomeNotification(interview, outcome) {
+  const message =
+    outcome === "selected"
+      ? buildSelectionMessage(interview)
+      : buildRejectionMessage(interview);
+
+  return sendNotification(interview.studentEmail, message);
 }

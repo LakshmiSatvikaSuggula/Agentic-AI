@@ -2,7 +2,7 @@ import express from "express";
 import Interview from "../models/Interview.js";
 import Student from "../models/Student.js";
 import { checkSlotConflicts } from "../utils/scheduler.js";
-import { sendInterviewReminders } from "../utils/notifications.js";
+import { sendInterviewReminders, sendOutcomeNotification } from "../utils/notifications.js";
 
 const router = express.Router();
 
@@ -24,7 +24,7 @@ router.post("/", async (req, res) => {
   }
 
   const existing = await Interview.find();
-  const proposedSlot = { panelists: panelists || [], room, startTime, durationMinutes };
+  const proposedSlot = { studentId, panelists: panelists || [], room, startTime, durationMinutes };
 
   const { hasConflict, conflicts } = checkSlotConflicts(existing, proposedSlot);
   if (hasConflict) {
@@ -39,10 +39,48 @@ router.post("/", async (req, res) => {
   res.status(201).json(interview);
 });
 
+// PATCH /api/interviews/:id - update status/outcome.
+// If an outcome (selected/rejected) is being set for the first time,
+// automatically email the student AND update their placement status.
 router.patch("/:id", async (req, res) => {
-  const updated = await Interview.findByIdAndUpdate(req.params.id, req.body, { new: true });
-  if (!updated) return res.status(404).json({ error: "Interview not found" });
-  res.json(updated);
+  const existing = await Interview.findById(req.params.id);
+  if (!existing) return res.status(404).json({ error: "Interview not found" });
+
+  const outcomeIsNew = req.body.outcome && req.body.outcome !== existing.outcome;
+
+  const updated = await Interview.findByIdAndUpdate(req.params.id, req.body, { returnDocument: "after" });
+
+  let notification = null;
+  let studentStatusUpdate = null;
+
+  if (outcomeIsNew && (updated.outcome === "selected" || updated.outcome === "rejected")) {
+    const student = await Student.findById(updated.studentId);
+
+    if (updated.outcome === "selected") {
+      const job = await Job.findById(updated.jobId);
+      studentStatusUpdate = await Student.findByIdAndUpdate(
+        updated.studentId,
+        {
+          placementStatus: "placed",
+          placedCompany: job?.companyName || "Unknown",
+          placedRole: job?.role || "Unknown",
+          placedOn: updated.startTime
+        },
+        { returnDocument: "after" }
+      );
+    }
+
+    notification = await sendOutcomeNotification(
+      { ...updated.toObject(), studentEmail: student?.email || null },
+      updated.outcome
+    );
+  }
+
+  res.json({
+    ...updated.toObject(),
+    outcomeNotification: notification,
+    studentStatusUpdate
+  });
 });
 
 router.post("/:id/notify", async (req, res) => {

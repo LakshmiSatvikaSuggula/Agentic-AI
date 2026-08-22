@@ -1,5 +1,6 @@
 // Handles interview/test slot booking with conflict detection for
-// panel members and rooms - the two things that can't be double-booked.
+// panel members, rooms, and the student being interviewed - none of
+// these can be double-booked into overlapping time slots.
 
 function toTimeRange(startTime, durationMinutes) {
   const start = new Date(startTime);
@@ -29,23 +30,45 @@ export function checkSlotConflicts(existingInterviews, proposedSlot) {
 
     if (!rangesOverlap(newStart, newEnd, existStart, existEnd)) continue;
 
-    const sharedPanelists = (interview.panelists || []).filter((p) =>
-      (proposedSlot.panelists || []).includes(p)
-    );
-
-    if (interview.room === proposedSlot.room) {
+    // Room conflict
+    if (interview.room && proposedSlot.room && interview.room === proposedSlot.room) {
       conflicts.push({
         type: "room",
-        withInterviewId: interview.id,
+        withInterviewId: interview.id || interview._id,
         detail: `Room ${interview.room} already booked ${interview.startTime}`
       });
     }
 
+    // Panelist conflict - supports both plain string panelists (legacy)
+    // and {name, email} object panelists (current format)
+    const existingPanelistEmails = (interview.panelists || []).map((p) =>
+      typeof p === "string" ? p : p.email
+    );
+    const proposedPanelistEmails = (proposedSlot.panelists || []).map((p) =>
+      typeof p === "string" ? p : p.email
+    );
+    const sharedPanelists = existingPanelistEmails.filter((email) =>
+      email && proposedPanelistEmails.includes(email)
+    );
+
     if (sharedPanelists.length > 0) {
       conflicts.push({
         type: "panelist",
-        withInterviewId: interview.id,
-        detail: `Panelist(s) ${sharedPanelists.join(", ")} already booked ${interview.startTime}`
+        withInterviewId: interview.id || interview._id,
+        detail: `Panelist(s) already booked at this time (${interview.startTime})`
+      });
+    }
+
+    // Student conflict - same student can't be in two interviews at once
+    if (
+      proposedSlot.studentId &&
+      interview.studentId &&
+      interview.studentId.toString() === proposedSlot.studentId.toString()
+    ) {
+      conflicts.push({
+        type: "student",
+        withInterviewId: interview.id || interview._id,
+        detail: `Student already has an interview scheduled at this overlapping time (${interview.startTime})`
       });
     }
   }

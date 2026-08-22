@@ -25,6 +25,9 @@ export default function Interviews() {
   const [formError, setFormError] = useState(null);
   const [conflicts, setConflicts] = useState(null);
 
+  const [eligibleStudents, setEligibleStudents] = useState([]);
+  const [loadingEligibility, setLoadingEligibility] = useState(false);
+
   function loadAll() {
     setLoading(true);
     Promise.all([api.getInterviews(), api.getJobs(), api.getStudents()])
@@ -39,9 +42,35 @@ export default function Interviews() {
 
   useEffect(loadAll, []);
 
+  // Whenever the selected job changes, fetch its eligibility results
+  // and narrow the student dropdown down to only eligible students.
+  useEffect(() => {
+    if (!form.jobId) {
+      setEligibleStudents([]);
+      return;
+    }
+
+    setLoadingEligibility(true);
+    api
+      .getJobEligibility(form.jobId)
+      .then((res) => {
+        const eligibleIds = res.results.filter((r) => r.eligible).map((r) => r.studentId);
+        const filtered = students.filter((s) => eligibleIds.includes(s._id));
+        setEligibleStudents(filtered);
+      })
+      .catch(() => setEligibleStudents([]))
+      .finally(() => setLoadingEligibility(false));
+  }, [form.jobId, students]);
+
   function handleChange(e) {
     const { name, value } = e.target;
     setForm((f) => ({ ...f, [name]: value }));
+
+    // Changing the job invalidates the previously picked student
+    if (name === "jobId") {
+      setForm((f) => ({ ...f, jobId: value, studentId: "", studentName: "" }));
+      return;
+    }
 
     // auto-fill studentName when a student is picked
     if (name === "studentId") {
@@ -138,9 +167,22 @@ export default function Interviews() {
           ))}
         </select>
 
-        <select name="studentId" value={form.studentId} onChange={handleChange}>
-          <option value="">Select Student *</option>
-          {students.map((s) => (
+        <select
+          name="studentId"
+          value={form.studentId}
+          onChange={handleChange}
+          disabled={!form.jobId || loadingEligibility}
+        >
+          <option value="">
+            {!form.jobId
+              ? "Select a job first"
+              : loadingEligibility
+              ? "Loading eligible students..."
+              : eligibleStudents.length === 0
+              ? "No eligible students for this job"
+              : "Select Student *"}
+          </option>
+          {eligibleStudents.map((s) => (
             <option key={s._id} value={s._id}>
               {s.name} ({s.rollNo})
             </option>
