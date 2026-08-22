@@ -1,6 +1,7 @@
 import express from "express";
 import Interview from "../models/Interview.js";
 import Student from "../models/Student.js";
+import Job from "../models/Job.js";
 import { checkSlotConflicts } from "../utils/scheduler.js";
 import { sendInterviewReminders, sendOutcomeNotification } from "../utils/notifications.js";
 
@@ -41,7 +42,8 @@ router.post("/", async (req, res) => {
 
 // PATCH /api/interviews/:id - update status/outcome.
 // If an outcome (selected/rejected) is being set for the first time,
-// automatically email the student AND update their placement status.
+// automatically email the student AND, if selected, record the
+// company/role/date directly on the student's record.
 router.patch("/:id", async (req, res) => {
   const existing = await Interview.findById(req.params.id);
   if (!existing) return res.status(404).json({ error: "Interview not found" });

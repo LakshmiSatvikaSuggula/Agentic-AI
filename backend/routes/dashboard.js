@@ -16,34 +16,24 @@ router.get("/", async (req, res) => {
   const students = await Student.find();
   const interviews = await Interview.find();
 
-  const placedStudents = students.filter((s) => s.placementStatus === "placed");
-
-  const placedStudentsList = placedStudents.map((student) => {
-    // Find the interview where this student was marked "selected"
-    const selectionInterview = interviews.find(
-      (iv) => iv.studentId.toString() === student._id.toString() && iv.outcome === "selected"
-    );
-    const job = selectionInterview
-      ? jobs.find((j) => j._id.toString() === selectionInterview.jobId.toString())
-      : null;
-
-    return {
-      studentId: student._id,
-      name: student.name,
-      rollNo: student.rollNo,
-      branch: student.branch,
-      companyName: job?.companyName || "Unknown",
-      role: job?.role || "Unknown",
-      placedOn: selectionInterview?.startTime || null
-    };
-  });
+  const placedStudentsList = students
+    .filter((s) => s.placementStatus === "placed")
+    .map((s) => ({
+      studentId: s._id,
+      name: s.name,
+      rollNo: s.rollNo,
+      branch: s.branch,
+      companyName: s.placedCompany,
+      role: s.placedRole,
+      placedOn: s.placedOn
+    }));
 
   res.json({
     summary: {
       totalJobs: jobs.length,
       openJobs: jobs.filter((j) => j.status === "open").length,
       totalStudents: students.length,
-      placedStudents: placedStudents.length,
+      placedStudents: placedStudentsList.length,
       totalInterviewsScheduled: interviews.length
     },
     pendingActions: getPendingActions(jobs, interviews),
