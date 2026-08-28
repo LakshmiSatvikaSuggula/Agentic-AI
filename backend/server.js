@@ -1,3 +1,4 @@
+
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
@@ -8,7 +9,6 @@ import interviewRoutes from "./routes/interviews.js";
 import dashboardRoutes from "./routes/dashboard.js";
 
 const app = express();
-const PORT = 5000||process.env.PORT;
 
 connectDB();
 
@@ -24,7 +24,5 @@ app.use("/api/jobs", jobRoutes);
 app.use("/api/interviews", interviewRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 
+export default app;
 
-app.listen(PORT,"0.0.0.0", () => {
-  console.log(`Placement agent backend running on http://localhost:${PORT}`);
-});
